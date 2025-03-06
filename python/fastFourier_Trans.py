@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Đọc dữ liệu từ file (giả sử dữ liệu đã ở dạng 16-bit)
-data = pd.read_csv("D:\Esp-idf\Mysource/ad8232_ecg_test/data_text/data_ecg_test_2nd.csv", header=None)
+data = pd.read_csv("D:\Esp-idf\Mysource\inmp441_test\data_text\Filter_test\data_test400Hz_mclk1152_raw.csv", header=None)
 data.columns = ['Amplitude']
 
 # Chuyển dữ liệu thành numpy array và ép kiểu về int16

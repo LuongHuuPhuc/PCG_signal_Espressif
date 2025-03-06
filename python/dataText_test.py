@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Đường dẫn đến file txt chứa dữ liệu thô
-file_path = "D:\Esp-idf\Mysource\sph0645_test\data_text\data_test400Hz_2nd.csv"  # Đổi tên file thành tên file thực tế của bạn
+file_path = "D:\Esp-idf\Mysource\inmp441_test\data_text\Filter_test\data_test400Hz_mclk1152_32bw_raw.csv"  # Đổi tên file thành tên file thực tế của bạn
 
 # Bước 1: Đọc dữ liệu từ file
 with open(file_path, "r") as file:

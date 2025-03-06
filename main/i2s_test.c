@@ -61,7 +61,7 @@ void i2s_install(void){
         .role = I2S_ROLE_MASTER,
         .dma_desc_num = dmaDesc, //6 * 32 = 192
         .dma_frame_num = dmaLen, //32 bytes
-        .auto_clear = true,
+        .auto_clear = true, 
     };
 
     //Khoi tao RX channel va ktr loi
@@ -73,13 +73,21 @@ void i2s_install(void){
         .clk_cfg = {
             .sample_rate_hz = SAMPLE_RATE, //Tan so lay mau
             .clk_src = I2S_CLK_SRC_DEFAULT, //Nguon clock mac dinh
-            .mclk_multiple = I2S_MCLK_MULTIPLE_384, //Boi cua 3 (384,768,..) de phu hop voi du lieu 24 bit
-        },
+            /**
+             * @param mclk_multiple cang tang thi do nhieu (jitter) cua CLK va WS cang giam => Do chinh xac du lieu cang cao    
+             * Day la boi so cua master clock doi voi tan so lay mau 
+             */
+            .mclk_multiple = I2S_MCLK_MULTIPLE_1152, //Boi cua 3 (384,768,..) de phu hop voi du lieu 24 bit
+        },  
         //Cau hinh du lieu trong 1 frame
         .slot_cfg = {
+            /**
+             * @note De 32-bit width thi moi chu ki dem duoc 10 mau
+             * nhung khi de xuong 24-bit width thi dem len 13 mau ???
+             */
             .data_bit_width = I2S_DATA_BIT_WIDTH_32BIT, //So bit moi du lieu
             .slot_mode = I2S_SLOT_MODE_MONO, //Che do mono (thu/phat 1 kenh)
-            .slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT, //So bit moi slot
+            .slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT, //So bit moi slot (moi kenh)
             .slot_mask = I2S_STD_SLOT_LEFT //Kenh du lieu trai
         },      
         //Cau hinh GPIO
@@ -118,15 +126,15 @@ void readINMP441data_task(void *pvParameters){
             break;
         }
 
-    int samplesRead = bytes_read / sizeof(int32_t); //Số mẫu đọc được (1 kênh) || dữ liệu int32_t = 4 bytes 
-    for(size_t i = 0; i < samplesRead; i++){
-        buffer16[i] = filter_process((int16_t)(buffer32[i] >> 8)); //Dich ve 24-bit roi ep ve 16-bit
-        // buffer16[i] = (int16_t)(buffer32[i] >> 8);
-        printf("\n%d", buffer16[i]);
+        int samplesRead = bytes_read / sizeof(int32_t); //Số mẫu đọc được (1 kênh) || dữ liệu int32_t = 4 bytes 
+        for(size_t i = 0; i < samplesRead; i++){
+            // buffer16[i] = filter_process((int16_t)(buffer32[i] >> 8)); //Dich ve 24-bit roi ep ve 16-bit
+            buffer16[i] = (int16_t)(buffer32[i] >> 8); //Raw data
+            printf("\n%d", buffer16[i]);
         }
     }  
 }
 
 void app_main(void){ 
-    xTaskCreatePinnedToCore(readINMP441data_task, "readINMP441", 1023 * 15, NULL, 5, &readINMP441_handle, 1);
+    xTaskCreatePinnedToCore(readINMP441data_task, "readINMP441", 1024 * 15, NULL, 5, &readINMP441_handle, 1);
 }

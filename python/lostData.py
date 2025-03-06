@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-data_fame = pd.read_csv("D:\Esp-idf\Mysource\sph0645_test\data_test400Hz_1st.csv")
+data_fame = pd.read_csv("D:\Esp-idf\Mysource\inmp441_test\data_text\Filter_test/data_test400Hz_mclk768.csv")
 x = range(len(data_fame))
 plt.plot(x, data_fame, marker="x", linestyle='-')
 
