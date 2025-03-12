@@ -6,6 +6,8 @@
 #ifndef FILTER_H_
 #define FILTER_H_
 
+#pragma once
+
 #include <stdio.h>
 #include <stdint.h>
 
@@ -45,7 +47,7 @@ extern butterworth_filter_t butterworth_filter;
  * @param notch_freq Tan so trung tam - can loai bo (50Hz...)
  * @param q_pram He so chat luong, q cang cao bang thong cang hep, bi cat cang ro
  */
-void notch_filter_init(notch_filter_t *filter, float notch_sample_rate, float notch_freq, float q_param);
+extern void notch_filter_init(notch_filter_t *filter, float notch_sample_rate, float notch_freq, float q_param);
 
 /**
  * @brief Ham ap dung bo loc Notch len du lieu dau vao cho moi mau am thanh
@@ -53,7 +55,7 @@ void notch_filter_init(notch_filter_t *filter, float notch_sample_rate, float no
  * @param filter1 Bo loc thu nhat 
  * @param filter2 Bo loc thu hai 
  */
-float notch_filter_apply(notch_filter_t *filter1, notch_filter_t *filter2, float input_sample);
+extern float notch_filter_apply(notch_filter_t *filter1, notch_filter_t *filter2, float input_sample);
 
 /**
  * @brief Ham khoi tao bo loc Butterworth de loai bo tan so cao tren 500Hz
@@ -62,19 +64,19 @@ float notch_filter_apply(notch_filter_t *filter1, notch_filter_t *filter2, float
  * @param sample_rate Tan so lay mau
  * @param cutoff_freq Tan so cat (Loai bo tan so tu tan so cat tro len)
  */
-void butterworth_filter_init(butterworth_filter_t *filter, float sample_rate, float cutoff_freq);
+extern void butterworth_filter_init(butterworth_filter_t *filter, float sample_rate, float cutoff_freq);
 
 /**
  * @brief Ham ap dung bo loc Butterworth
  * @param input_sample Data sau khi duoc xu ly tu Notch
  * @param filter Bo loc Butterworth
  */
-float butterworth_filter_apply(butterworth_filter_t *filter, float input_sample);
+extern float butterworth_filter_apply(butterworth_filter_t *filter, float input_sample);
 
 /** 
  * @note Ham cuoi cung: ap dung tat ca cac bo loc va tra ve 16-bit
  * @return Tra ve gia tri 16-bit
  */
-int16_t filter_process(int16_t input_sample);
+extern int16_t filter_process(int16_t input_sample);
 
 #endif //FILTER_H_

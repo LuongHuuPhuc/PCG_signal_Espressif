@@ -4,11 +4,11 @@
  * @date 2025/02/22
  */
 
-#include<stdio.h>
-#include<stdint.h>
-#include<string.h>
-#include<math.h>  
-#include"filter.h" 
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <math.h>  
+#include "filter.h" 
 
 void notch_filter_init(notch_filter_t *filter, float notch_sample_rate, float notch_freq, float q_param){
   filter->notch_sample_rate = notch_sample_rate;
