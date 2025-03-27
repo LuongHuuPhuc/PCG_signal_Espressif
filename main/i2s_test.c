@@ -25,7 +25,10 @@
 #define I2S_SCK_PIN 32
 #define I2S_WS_PIN 25
 #define I2S_SD_PIN 33
-#define SAMPLE_RATE 4000 //Tan so lay mau 4000Hz
+#define SAMPLE_RATE 2000 //Tan so lay mau 4000Hz
+#define FILTER_SAMPLE_RATE 2000.0f
+#define HPF_CUTOFF 25.0f
+#define LPF_CUTOFF 120.0f
 
 /**
  * @note Sample rate cang cao thi dmaLen cung cang cao de tranh mat mau
@@ -34,12 +37,16 @@
  * @param dmaDesc So bo dac ta DMA, moi bo co the luu tru so byte = dmaLen 
  */
 #define dmaDesc 6 //Bo dac ta DMA
-#define dmaLen 128 //So bytes cua moi buffer
+#define dmaLen 32 //So bytes cua moi buffer
 #define DMA_BUFFER_SIZE (dmaLen * dmaDesc) //So bytes cua buffer DMA cung cap cho = 768　
 
-//Khai bao bo loc Notch & butterworth
-notch_filter_t notch_filter1, notch_filter2;
-butterworth_filter_t butterworth_filter;
+btw_lowPass_filter_t butterworth_low_pass_filter, 
+                     butterworth_low_pass_filter1, butterworth_low_pass_filter2, 
+                     butterworth_low_pass_filter3, butterworth_low_pass_filter4;
+
+btw_highPass_filter_t butterworth_high_pass_filter, 
+                      butterworth_high_pass_filter1, butterworth_high_pass_filter2, 
+                      butterworth_high_pass_filter3, butterworth_high_pass_filter4;
 
 //Buffer de luu tru du lieu doc duoc tu buffer DMA
 //Chuyen doi tu byte DMA sang so luong mau cua moi buffer 
@@ -50,6 +57,20 @@ TaskHandle_t readINMP441_handle = NULL;
 
 //Tao kenh rx
 i2s_chan_handle_t rx_channel = NULL;        
+
+void filter_init(){
+    //Khoi tao cac bac cua bo loc high pass
+    btw_highPass_filter_init(&butterworth_high_pass_filter1, FILTER_SAMPLE_RATE, HPF_CUTOFF);
+    btw_highPass_filter_init(&butterworth_high_pass_filter2, FILTER_SAMPLE_RATE, HPF_CUTOFF);
+    btw_highPass_filter_init(&butterworth_high_pass_filter3, FILTER_SAMPLE_RATE, HPF_CUTOFF);
+    btw_highPass_filter_init(&butterworth_high_pass_filter4, FILTER_SAMPLE_RATE, HPF_CUTOFF);
+
+    //Khoi tao cac bac cua bo loc low pass
+    btw_lowPass_filter_init(&butterworth_low_pass_filter1, FILTER_SAMPLE_RATE, LPF_CUTOFF);
+    btw_lowPass_filter_init(&butterworth_low_pass_filter2, FILTER_SAMPLE_RATE, LPF_CUTOFF);
+    btw_lowPass_filter_init(&butterworth_low_pass_filter3, FILTER_SAMPLE_RATE, LPF_CUTOFF);
+    btw_lowPass_filter_init(&butterworth_low_pass_filter4, FILTER_SAMPLE_RATE, LPF_CUTOFF);
+}
 
 //Cau hinh i2s std (I2S_std)
 void i2s_install(void){
@@ -69,16 +90,16 @@ void i2s_install(void){
 
     //Cau hinh che do chuan i2s, API moi
     i2s_std_config_t std_cfg = {
-        //Cau hinh clock
+        /**
+         * @param mclk_multiple cang tang thi do nhieu (jitter) cua CLK va WS cang giam => Do chinh xac du lieu cang cao    
+         * Day la boi so cua master clock doi voi tan so lay mau 
+         */
         .clk_cfg = {
             .sample_rate_hz = SAMPLE_RATE, //Tan so lay mau
             .clk_src = I2S_CLK_SRC_DEFAULT, //Nguon clock mac dinh
-            /**
-             * @param mclk_multiple cang tang thi do nhieu (jitter) cua CLK va WS cang giam => Do chinh xac du lieu cang cao    
-             * Day la boi so cua master clock doi voi tan so lay mau 
-             */
             .mclk_multiple = I2S_MCLK_MULTIPLE_1152, //Boi cua 3 (384,768,..) de phu hop voi du lieu 24 bit
         },  
+
         //Cau hinh du lieu trong 1 frame
         .slot_cfg = {
             /**
@@ -89,7 +110,8 @@ void i2s_install(void){
             .slot_mode = I2S_SLOT_MODE_MONO, //Che do mono (thu/phat 1 kenh)
             .slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT, //So bit moi slot (moi kenh)
             .slot_mask = I2S_STD_SLOT_LEFT //Kenh du lieu trai
-        },      
+        },  
+
         //Cau hinh GPIO
         .gpio_cfg = {
             .bclk = I2S_SCK_PIN,
@@ -108,11 +130,7 @@ void i2s_install(void){
 void readINMP441data_task(void *pvParameters){ 
     i2s_install();
     ESP_LOGI(TAG, "Bat dau doc du lieu tu INMP441...");
-
-    //Khoi tao 2 bo loc Notch (50Hz, 100Hz, tan so lay mau 4000Hz, Q = 50)
-    notch_filter_init(&notch_filter1, 4000.0f, NOTCH_FREQ1, Q_PARAM);
-    notch_filter_init(&notch_filter2, 4000.0f, NOTCH_FREQ1, Q_PARAM);
-    butterworth_filter_init(&butterworth_filter, 4000.0f, BTTW_CUTOFF);
+    filter_init();
     size_t bytes_read;
 
     while(true){
@@ -128,8 +146,8 @@ void readINMP441data_task(void *pvParameters){
 
         int samplesRead = bytes_read / sizeof(int32_t); //Số mẫu đọc được (1 kênh) || dữ liệu int32_t = 4 bytes 
         for(size_t i = 0; i < samplesRead; i++){
-            // buffer16[i] = filter_process((int16_t)(buffer32[i] >> 8)); //Dich ve 24-bit roi ep ve 16-bit
-            buffer16[i] = (int16_t)(buffer32[i] >> 8); //Raw data
+            buffer16[i] = bandpass_cascade_4th_process((int16_t)(buffer32[i] >> 8));
+            // buffer16[i] = (int16_t)(buffer32[i] >> 8); //Raw data
             printf("\n%d", buffer16[i]);
         }
     }  
