@@ -88,8 +88,8 @@ extern float btw_lowPass_filter_apply(btw_lowPass_filter_t *filter, float input_
 /**
  * @brief Ham ap dung boo loc low pass (bac 4)
  */
-float btw_lowPass_filter_biquad_cascade_4th(btw_lowPass_filter_t *filter1, btw_lowPass_filter_t *filter2, 
-  btw_lowPass_filter_t *filter3, btw_lowPass_filter_t *filter4, float input_sample);
+int16_t btw_lowPass_filter_biquad_cascade_4th(btw_lowPass_filter_t *filter1, btw_lowPass_filter_t *filter2, 
+  btw_lowPass_filter_t *filter3, btw_lowPass_filter_t *filter4, int16_t input_sample);
 
 /**
  * @brief Ham khoi tao bo loc high pass de loc thong cao (bac 1)
@@ -110,8 +110,8 @@ extern float btw_highPass_filter_apply(btw_highPass_filter_t *filter, float inpu
 /**
  * @brief Ham ap dung bo loc high pass (bac 4)
  */
-float btw_highPass_filter_biquad_cascade_4th(btw_highPass_filter_t *filter1, btw_highPass_filter_t *filter2, 
-  btw_highPass_filter_t *filter3, btw_highPass_filter_t *filter4, float input_sample);
+int16_t btw_highPass_filter_biquad_cascade_4th(btw_highPass_filter_t *filter1, btw_highPass_filter_t *filter2, 
+  btw_highPass_filter_t *filter3, btw_highPass_filter_t *filter4, int16_t input_sample);
 
 /** 
  * @note Ham cuoi cung: notch + lowpass

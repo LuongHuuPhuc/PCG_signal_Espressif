@@ -1,6 +1,7 @@
 /**
  * @note ADC cua inmp441 la 24-bit nhung van chuyen tu 32-bit(esp32 de xu ly hon) 
  * ve 24-bit cua inmp roi moi ep ve 16-bit chu khong lay truc tiep 24-bit
+ * @note S1(20-100Hz), S2(50-200Hz)
  * @author Luong Huu Phuc
  */
 #include <stdio.h>
@@ -21,68 +22,41 @@
 #define TAG "INMP441"
 
 //Pin cau hinh INMP441 (I2S Mode)
-#define I2S_NUM I2S_NUM_0
+#define I2S_NUM     I2S_NUM_0
 #define I2S_SCK_PIN 32
-#define I2S_WS_PIN 25
-#define I2S_SD_PIN 33
-#define SAMPLE_RATE 2000 //Tan so lay mau 4000Hz
-#define FILTER_SAMPLE_RATE 2000.0f
-#define HPF_CUTOFF 25.0f
-#define LPF_CUTOFF 120.0f
+#define I2S_WS_PIN  25
+#define I2S_SD_PIN  33
+#define SAMPLE_RATE 4000
 
 /**
  * @note Sample rate cang cao thi dmaLen cung cang cao de tranh mat mau
  * @param dmaLen Tang len neu du lieu bi mat mau, CPU bi ngat nhieu ma khong quan tam den latency
  * ->Cang lon thi buffer_durations cang lau->Cang it mat mau->CPU xu ly it viec hon->Tre lai cao hon
  * @param dmaDesc So bo dac ta DMA, moi bo co the luu tru so byte = dmaLen 
+ * @note Do tin hieu PCG: Fs = 2000 => dmaLen = 128, Fs = 800, 1000 => dmaLen = 64
  */
-#define dmaDesc 6 //Bo dac ta DMA
-#define dmaLen 32 //So bytes cua moi buffer
-#define DMA_BUFFER_SIZE (dmaLen * dmaDesc) //So bytes cua buffer DMA cung cap cho = 768　
-
-btw_lowPass_filter_t butterworth_low_pass_filter, 
-                     butterworth_low_pass_filter1, butterworth_low_pass_filter2, 
-                     butterworth_low_pass_filter3, butterworth_low_pass_filter4;
-
-btw_highPass_filter_t butterworth_high_pass_filter, 
-                      butterworth_high_pass_filter1, butterworth_high_pass_filter2, 
-                      butterworth_high_pass_filter3, butterworth_high_pass_filter4;
+#define dmaDesc          4 //Bo dac ta DMA
+#define dmaLen           256 //So bytes cua moi buffer
+#define DMA_BUFFER_SIZE  (dmaLen * dmaDesc) //So bytes cua buffer DMA cung cap cho (4 * 256 = 1024 bytes)
+#define I2S_SAMPLE_COUNT (DMA_BUFFER_SIZE / sizeof(int32_t)) //Kich thuoc so mau (1024 / 4 = 256 samples)
 
 //Buffer de luu tru du lieu doc duoc tu buffer DMA
 //Chuyen doi tu byte DMA sang so luong mau cua moi buffer 
-int16_t buffer16[DMA_BUFFER_SIZE / sizeof(int32_t) * 3 / 2] = {0}; //288 samples (576 bytes) de luu duoc 3 bytes sau khi dich cua buffer32
-int32_t buffer32[DMA_BUFFER_SIZE / sizeof(int32_t)] = {0}; //192 samples (768 bytes)
-
-TaskHandle_t readINMP441_handle = NULL;
-
-//Tao kenh rx
+int32_t buffer32[I2S_SAMPLE_COUNT] = {0}; 
+int16_t buffer16[I2S_SAMPLE_COUNT] = {0};
 i2s_chan_handle_t rx_channel = NULL;        
-
-void filter_init(){
-    //Khoi tao cac bac cua bo loc high pass
-    btw_highPass_filter_init(&butterworth_high_pass_filter1, FILTER_SAMPLE_RATE, HPF_CUTOFF);
-    btw_highPass_filter_init(&butterworth_high_pass_filter2, FILTER_SAMPLE_RATE, HPF_CUTOFF);
-    btw_highPass_filter_init(&butterworth_high_pass_filter3, FILTER_SAMPLE_RATE, HPF_CUTOFF);
-    btw_highPass_filter_init(&butterworth_high_pass_filter4, FILTER_SAMPLE_RATE, HPF_CUTOFF);
-
-    //Khoi tao cac bac cua bo loc low pass
-    btw_lowPass_filter_init(&butterworth_low_pass_filter1, FILTER_SAMPLE_RATE, LPF_CUTOFF);
-    btw_lowPass_filter_init(&butterworth_low_pass_filter2, FILTER_SAMPLE_RATE, LPF_CUTOFF);
-    btw_lowPass_filter_init(&butterworth_low_pass_filter3, FILTER_SAMPLE_RATE, LPF_CUTOFF);
-    btw_lowPass_filter_init(&butterworth_low_pass_filter4, FILTER_SAMPLE_RATE, LPF_CUTOFF);
-}
+TaskHandle_t readINMP441_handle = NULL;
 
 //Cau hinh i2s std (I2S_std)
 void i2s_install(void){
     ESP_LOGI(TAG, "Cau hinh kenh i2s...");
 
-    //Cau hinh kenh rx cho i2s
     i2s_chan_config_t chan_cfg = {
         .id = I2S_NUM,
         .role = I2S_ROLE_MASTER,
-        .dma_desc_num = dmaDesc, //6 * 32 = 192
-        .dma_frame_num = dmaLen, //32 bytes
-        .auto_clear = true, 
+        .dma_desc_num = dmaDesc,
+        .dma_frame_num = dmaLen,
+        .auto_clear = true //Tu dong reset DMA neu day
     };
 
     //Khoi tao RX channel va ktr loi
@@ -91,12 +65,15 @@ void i2s_install(void){
     //Cau hinh che do chuan i2s, API moi
     i2s_std_config_t std_cfg = {
         /**
-         * @param mclk_multiple cang tang thi do nhieu (jitter) cua CLK va WS cang giam => Do chinh xac du lieu cang cao    
-         * Day la boi so cua master clock doi voi tan so lay mau 
+         * @param mclk_multiple Day la xung nhip chinh cua bo I2S, anh huong den BCLK
+         * \note Cang tang thi do nhieu (jitter) cua CLK va WS cang giam 
+         * => Do chinh xac du lieu cang cao, thich hop voi che do lay mau du lieu co do phan giai cao
+         * \note Day la boi so cua master clock doi voi sample_rate MCLK = multiple x sample_rate
+         * \note BLCK = sample_rate x so kenh x bit depth
          */
         .clk_cfg = {
             .sample_rate_hz = SAMPLE_RATE, //Tan so lay mau
-            .clk_src = I2S_CLK_SRC_DEFAULT, //Nguon clock mac dinh
+            .clk_src = I2S_CLK_SRC_DEFAULT, //Nguon clock mac dinh (240MHz)
             .mclk_multiple = I2S_MCLK_MULTIPLE_1152, //Boi cua 3 (384,768,..) de phu hop voi du lieu 24 bit
         },  
 
@@ -128,31 +105,31 @@ void i2s_install(void){
 }
 
 void readINMP441data_task(void *pvParameters){ 
-    i2s_install();
     ESP_LOGI(TAG, "Bat dau doc du lieu tu INMP441...");
-    filter_init();
-    size_t bytes_read;
+    size_t bytes_read = 0; //Cho biet thuc te da doc duoc bao nhieu byte thanh cong  
 
     while(true){
         vTaskDelay(1);
-        esp_err_t ret = i2s_channel_read(rx_channel, &buffer32, sizeof(buffer32), &bytes_read, 100);
+        esp_err_t ret = i2s_channel_read(rx_channel, &buffer32, sizeof(buffer32), &bytes_read, portMAX_DELAY);
         if(ret == ESP_ERR_TIMEOUT){
             ESP_LOGE(TAG, "Timeout xay ra, bo qua frame loi:  %s", esp_err_to_name(ret));
             continue;
         } else if(ret != ESP_OK){   
             ESP_LOGE(TAG, "Loi khong xac dinh: %s", esp_err_to_name(ret));
             break;
-        }
-
-        int samplesRead = bytes_read / sizeof(int32_t); //Số mẫu đọc được (1 kênh) || dữ liệu int32_t = 4 bytes 
-        for(size_t i = 0; i < samplesRead; i++){
-            buffer16[i] = bandpass_cascade_4th_process((int16_t)(buffer32[i] >> 8));
-            // buffer16[i] = (int16_t)(buffer32[i] >> 8); //Raw data
-            printf("\n%d", buffer16[i]);
+        } else if(ret == ESP_OK && bytes_read > 0){
+            size_t samplesActualRead = bytes_read / sizeof(int32_t);
+            for(size_t i = 0; i < samplesActualRead; i++){
+                buffer16[i] = (int16_t)(buffer32[i] >> 8);
+                printf("\n%d", buffer16[i]);
+            }
+        }else{
+            ESP_LOGW(TAG, "Can not read data form I2S !");
         }
     }  
 }
 
 void app_main(void){ 
+    i2s_install();
     xTaskCreatePinnedToCore(readINMP441data_task, "readINMP441", 1024 * 15, NULL, 5, &readINMP441_handle, 1);
 }

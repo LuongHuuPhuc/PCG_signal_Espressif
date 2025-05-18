@@ -155,28 +155,30 @@ float btw_highPass_filter_apply(btw_highPass_filter_t *filter, float input_sampl
   return output;
 }
 
-float btw_lowPass_filter_biquad_cascade_4th(btw_lowPass_filter_t *filter1, btw_lowPass_filter_t *filter2, 
-                btw_lowPass_filter_t *filter3, btw_lowPass_filter_t *filter4, float input_sample){
+int16_t btw_lowPass_filter_biquad_cascade_4th(btw_lowPass_filter_t *filter1, btw_lowPass_filter_t *filter2, 
+                btw_lowPass_filter_t *filter3, btw_lowPass_filter_t *filter4, int16_t input_sample){
   float first_filter, second_filter, third_filter, forth_filter;
+  float temp = (float)input_sample;
 
-  first_filter = btw_lowPass_filter_apply(filter1, input_sample);
+  first_filter = btw_lowPass_filter_apply(filter1, temp);
   second_filter = btw_lowPass_filter_apply(filter2, first_filter);
   third_filter = btw_lowPass_filter_apply(filter3, second_filter);
   forth_filter = btw_lowPass_filter_apply(filter4, third_filter);
 
-  return forth_filter;
+  return (int16_t)forth_filter;
 }
 
-float btw_highPass_filter_biquad_cascade_4th(btw_highPass_filter_t *filter1, btw_highPass_filter_t *filter2, 
-               btw_highPass_filter_t *filter3, btw_highPass_filter_t *filter4, float input_sample){
+int16_t btw_highPass_filter_biquad_cascade_4th(btw_highPass_filter_t *filter1, btw_highPass_filter_t *filter2, 
+               btw_highPass_filter_t *filter3, btw_highPass_filter_t *filter4, int16_t input_sample){
   float first_filter, second_filter, third_filter, forth_filter;
+  float temp = (float)input_sample;
 
-  first_filter = btw_highPass_filter_apply(filter1, input_sample);
+  first_filter = btw_highPass_filter_apply(filter1, temp);
   second_filter = btw_highPass_filter_apply(filter2, first_filter);
   third_filter = btw_highPass_filter_apply(filter3, second_filter);
   forth_filter = btw_highPass_filter_apply(filter4, third_filter);
 
-  return forth_filter;
+  return (int16_t)forth_filter;
 }
 
 int16_t filter_process(int16_t input_sample){
@@ -188,9 +190,9 @@ int16_t filter_process(int16_t input_sample){
 }
 
 int16_t bandpass_cascade_4th_process(int16_t input_sample){
-  float temp = (float)input_sample;
+  int16_t temp = input_sample;
   temp = btw_lowPass_filter_biquad_cascade_4th(&butterworth_low_pass_filter1, &butterworth_low_pass_filter2, &butterworth_low_pass_filter3, &butterworth_low_pass_filter4, temp);
   temp = btw_highPass_filter_biquad_cascade_4th(&butterworth_high_pass_filter1, &butterworth_high_pass_filter2, &butterworth_high_pass_filter3, &butterworth_high_pass_filter4, temp);
 
-  return (int16_t)temp;
+  return temp;
 }
