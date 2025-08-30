@@ -19,7 +19,7 @@
 #include "driver/i2s_types.h"
 #include "driver/i2s_common.h"
 
-#define TAG "INMP441"
+#define TAG         "INMP441"
 
 //Pin cau hinh INMP441 (I2S Mode)
 #define I2S_NUM     I2S_NUM_0
