@@ -108,6 +108,7 @@ void readINMP441data_task(void *pvParameters){
     ESP_LOGI(TAG, "Bat dau doc du lieu tu INMP441...");
     size_t bytes_read = 0; //Cho biet thuc te da doc duoc bao nhieu byte thanh cong  
 
+    //FIXME: Co the logic parse data o day chua dung lam (can xem lai)
     while(true){
         vTaskDelay(1);
         esp_err_t ret = i2s_channel_read(rx_channel, &buffer32, sizeof(buffer32), &bytes_read, portMAX_DELAY);
