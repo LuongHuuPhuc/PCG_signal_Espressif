@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pywt 
 import matplotlib.pyplot as plt
 from scipy import signal as sg
@@ -49,7 +50,7 @@ def plot_signal(original_signal, denoised_signal):
   plt.show()
 
 #Doc tin hieu tu file csv
-file_path = "D:/Esp-idf/amplified_pcg.csv"
+file_path = pd.read_csv(r"D:\Esp-idf\Test_source\inmp441_test\data_text\Snore_test\snore5_4kHzsr.csv", header=None)
 signal_data = read_signal(file_path)
 
 #Ap dung Wavelet de loc nhieu 

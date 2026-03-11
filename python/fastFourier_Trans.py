@@ -3,11 +3,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Đọc dữ liệu từ file (giả sử dữ liệu đã ở dạng 16-bit)
-data = pd.read_csv("D:\Esp-idf\Mysource\inmp441_test\data_text\Snore_test\TuanAnh_snore.csv", header=None)
+data = pd.read_csv(r"D:\Esp-idf\Test_source\inmp441_test\data_text\Filtered\filter_snore_sound_1st.csv", header=None)
 data.columns = ['Amplitude']
 
 # Chuyển dữ liệu thành numpy array và ép kiểu về int16
 signal = data['Amplitude'].to_numpy(dtype=np.int16)  # Ép kiểu về số nguyên 16-bit
+
 # Tham số tín hiệu
 fs = 1000  # Tần số lấy mẫu (Hz), cần thay đổi theo tín hiệu thực tế   　 
 N = len(signal)  # Số mẫu
